@@ -8,45 +8,11 @@ private variable i j k ℓ : Level
 
 -- Q1
 
-retr : {A : Type i} {B : Type j} → (A → B) → Type (lmax i j)
-retr {_} {_} {A} {B} f = Σ \(g : B → A) → (f ▹ g) ∼ id
-
-inj : {A : Type i} {B : Type j} → (A → B) → Type (lmax i j)
-inj {_} {_} {A} {B} f = (x y : A) → f x ≡ f y → x ≡ y
-
 -- Any retraction induces injectivity:
 retr-to-inj : {A : Type i} {B : Type j} {f : A → B} → retr f → inj f
-retr-to-inj (f⁻¹ , e) x y p = ! (e (ref x)) ∙ (ap f⁻¹ p) ∙ e (ref y)
+retr-to-inj (f⁻¹ , e) {x} {y} p = ! (e x) ∙ (ap f⁻¹ p) ∙ e y
 
 -- Q2
-
--- I've chosen to use a different version of homotopy here, for no reason in particular.
-
-_∼▹_ : {A : Type i} {B : Type j} {C : Type k} {f g : A → B} → f ∼ g → (h : B → C) → (f ▹ h) ∼ (g ▹ h)
-(p ∼▹ h) (ref x) = ap h (p (ref x))
-infix 7 _∼▹_
-
-_▹∼_ : {A : Type i} {B : Type j} {C : Type k} {f g : B → C} (h : A → B) →  f ∼ g → (h ▹ f) ∼ (h ▹ g)
-(h ▹∼ p) (ref x) = p (ref (h x))
-infix 7 _▹∼_
-
--- For convenience, a two-sided whiskering operation is provided.
-_▹∼_∼▹_ : {A : Type i} {B : Type j} {C : Type k} {D : Type ℓ} {f g : B → C} (h : A → B) → f ∼ g → (h' : C → D) → (h ▹ f ▹ h') ∼ (h ▹ g ▹ h')
-h ▹∼ p ∼▹ h' = h ▹∼ (p ∼▹ h')
-infix 7 _▹∼_∼▹_
-
-!∼ : {B : Type i} {F : B → Type j} {f g : Π F} → f ∼ g → g ∼ f
-!∼ p (ref x) = ! (p (ref x))
-
-_∙∼_ : {B : Type i} {F : B → Type j} {f g h : Π F} → f ∼ g → g ∼ h → f ∼ h
-(p ∙∼ q) (ref x) = p (ref x) ∙ q (ref x)
-infixr 7 _∙∼_
-
-sect : {A : Type i} {B : Type j} → (A → B) → Type (lmax i j)
-sect {_} {_} {A} {B} f = Σ \(g : B → A) → (g ▹ f) ∼ id
-
-is-equiv : {A : Type i} {B : Type j} (f : A → B) → Type (lmax i j)
-is-equiv f = (sect f) × (retr f)
 
 -- Behold: a commutative triangle!
 module com {A : Type i} {B : Type j} {X : Type k} (f : A → X) (g : B → X) (h : A → B) (k : f ∼ h ▹ g) where 
@@ -96,7 +62,7 @@ module com {A : Type i} {B : Type j} {X : Type k} (f : A → X) (g : B → X) (h
                psh)
 
 id-is-equiv : {A : Type i} → is-equiv (id {_} {A})
-id-is-equiv = (id , apd id) , (id , apd id)
+id-is-equiv = (id , ref) , (id , ref)
 
 -- Any retraction/section of an equivalence is also an equivalence.
 
@@ -120,10 +86,10 @@ Eq-𝟚 𝟏 𝟏 = 𝟙
 
 -- Proof by 'cheating' :P
 φ-is-equiv : (a b : 𝟚) → is-equiv (φ {a} {b})
-φ-is-equiv 𝟎 𝟎 = ((\{⋆ → ref 𝟎}) , (\{(ref ⋆) → ref ⋆})) , ((\{⋆ → ref 𝟎}) , (\{(ref (ref 𝟎)) → ref (ref 𝟎)}))
-φ-is-equiv 𝟎 𝟏 = ((\()) , \{a} → 𝟘-elim' a) , ((\()) , \{(ref ())})
-φ-is-equiv 𝟏 𝟎 = ((\()) , \{a} → 𝟘-elim' a) , ((\()) , \{(ref ())})
-φ-is-equiv 𝟏 𝟏 = ((\{⋆ → ref 𝟏}) , (\{(ref ⋆) → ref ⋆})) , ((\{⋆ → ref 𝟏}) , (\{(ref (ref 𝟏)) → ref (ref 𝟏)}))
+φ-is-equiv 𝟎 𝟎 = ((\{⋆ → ref 𝟎}) , (\{⋆ → ref ⋆})) , ((\{⋆ → ref 𝟎}) , (\{(ref 𝟎) → ref (ref 𝟎)}))
+φ-is-equiv 𝟎 𝟏 = ((\()) , \a → 𝟘-elim' a) , ((\()) , \{()})
+φ-is-equiv 𝟏 𝟎 = ((\()) , \a → 𝟘-elim' a) , ((\()) , \{()})
+φ-is-equiv 𝟏 𝟏 = ((\{⋆ → ref 𝟏}) , (\{⋆ → ref ⋆})) , ((\{⋆ → ref 𝟏}) , (\{(ref 𝟏) → ref (ref 𝟏)}))
 
 !₂ : 𝟚 → 𝟚
 !₂ 𝟎 = 𝟏
@@ -139,13 +105,13 @@ const : {D : Type i} → {C : Type j} → C → D → C
 const b _ = b
 
 const-is-not-equiv-𝟚 : (b : 𝟚) → ¬ (is-equiv (const {D = 𝟚} b))
-const-is-not-equiv-𝟚 b iec = φ (retr-to-inj (πf iec) 𝟎 𝟏 (ref b))
+const-is-not-equiv-𝟚 b iec = φ (retr-to-inj (πf iec) {𝟎} {𝟏} (ref b))
 
 𝟙-factoring : {A : Type i} (f : 𝟙 → A) (x : 𝟙) → f x ≡ f ⋆
 𝟙-factoring f ⋆ = ref (f ⋆)
 
 𝟚≄𝟙 : (f : 𝟚 → 𝟙) → ¬ (is-equiv f)
-𝟚≄𝟙 f ief = φ (! (πf (πf ief) (ref 𝟎)) ∙ 𝟙-factoring (πb (πf ief)) _ ∙ ! (𝟙-factoring (πb (πf ief)) _) ∙ (πf (πf ief) (ref 𝟏)))
+𝟚≄𝟙 f ief = φ (! (πf (πf ief) 𝟎) ∙ 𝟙-factoring (πb (πf ief)) _ ∙ ! (𝟙-factoring (πb (πf ief)) _) ∙ (πf (πf ief) 𝟏))
 
 -- Q5
 

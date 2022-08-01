@@ -4,7 +4,7 @@ module SS2022.Prelude where
 
 open import Agda.Primitive using (Level; lsuc) renaming (Set to Type; lzero to lnil; _⊔_ to lmax) public
 
-private variable i j k : Level
+private variable i j k ℓ : Level
 
 {- Path Types -}
 
@@ -51,22 +51,26 @@ infixr 7 _▹_
 tr : {B : Type i} (F : B → Type j) → {b b' : B} → b ≡ b' → F b → F b'
 tr F (ref b) e = e
 
--- It is convenient to work with pathwise equality of functions:
+-- Pointwise and pathwise equalities of functions:
 
 _∼_ : {B : Type i} {F : B → Type j} (f g : Π F) → Type (lmax i j)
-_∼_ {_} {_} {B} {F} f g = {x y : B} → (p : x ≡ y) → tr F p (f x) ≡ g y
+_∼_ f g = ∀ x → f x ≡ g x
 infix 0 _∼_
 
-_∼'_ : {A : Type i} {B : Type j} (f g : A → B) → Type (lmax i j)
-_∼'_ f g = ∀ {x y} → x ≡ y → f x ≡ g y
-infix 0 _∼'_
+_≡ₚ_ : {B : Type i} {F : B → Type j} (f g : Π F) → Type (lmax i j)
+_≡ₚ_ {F = F} f g = ∀ {x y} → (p : x ≡ y) → tr F p (f x) ≡ g y
+infix 0 _≡ₚ_
+
+_≡ₘ_ : {D : Type i} {C : Type j} (f g : D → C) → Type (lmax i j)
+_≡ₘ_ f g = ∀ {x y} → x ≡ y → f x ≡ g y
+infix 0 _≡ₘ_
 
 -- We can apply functions to paths by applying them to their endpoints.
 
-ap : {A : Type i} {B : Type j} (f : A → B) → f ∼' f
+ap : {A : Type i} {B : Type j} (f : A → B) → f ≡ₘ f
 ap f (ref a) = ref (f a)
 
-apd : {A : Type i} {B : Type j} (f : A → B) → f ∼ f
+apd : {A : Type i} {B : Type j} (f : A → B) → f ≡ₚ f
 apd f (ref a) = ref (f a)
 
 -- We can apply an n-ary function to n paths to get a single path.
@@ -75,6 +79,26 @@ ap₂ : {A : Type i} {B : Type j} {C : Type k} (f : A → B → C) {a a' : A} {b
 ap₂ f (ref a) (ref b) = ref (f a b)
 
 -- Note: ap₀ would be ref and ap₁ would be ap.
+
+_∼▹_ : {A : Type i} {B : Type j} {C : Type k} {f g : A → B} → f ∼ g → (h : B → C) → (f ▹ h) ∼ (g ▹ h)
+(p ∼▹ h) x = ap h (p x)
+infix 7 _∼▹_
+
+_▹∼_ : {A : Type i} {B : Type j} {C : Type k} {f g : B → C} (h : A → B) →  f ∼ g → (h ▹ f) ∼ (h ▹ g)
+(h ▹∼ p) x = p (h x)
+infix 7 _▹∼_
+
+_▹∼_∼▹_ : {A : Type i} {B : Type j} {C : Type k} {D : Type ℓ} {f g : B → C} (h : A → B) → f ∼ g → (h' : C → D) → (h ▹ f ▹ h') ∼ (h ▹ g ▹ h')
+h ▹∼ p ∼▹ h' = h ▹∼ (p ∼▹ h')
+infix 7 _▹∼_∼▹_
+
+!∼ : {B : Type i} {F : B → Type j} {f g : Π F} → f ∼ g → g ∼ f
+!∼ p x = ! (p x)
+
+_∙∼_ : {B : Type i} {F : B → Type j} {f g h : Π F} → f ∼ g → g ∼ h → f ∼ h
+(p ∙∼ q) x = p x ∙ q x
+infixr 7 _∙∼_
+
 
 {- Sigma Types -}
 
@@ -91,6 +115,18 @@ open Σ public
 infixr 0 _,_
 
 -- {-# BUILTIN SIGMA Σ #-}
+
+-- Observational equality of sigma types:
+
+_≡ₛ_ : {B : Type i} {F : B → Type j} (u v : Σ F) → Type (lmax i j)
+_≡ₛ_ {F = F} (b , e) (b' , e') = Σ \(p : b ≡ b') → tr F p e ≡ e'
+infix 0 _≡ₛ_
+
+≡ₛ→≡ : {B : Type i} {F : B → Type j} {u v : Σ F} → u ≡ₛ v → u ≡ v
+≡ₛ→≡ (ref b , ref e) = ref (b , e)
+
+≡→≡ₛ : {B : Type i} {F : B → Type j} {u v : Σ F} → u ≡ v → u ≡ₛ v
+≡→≡ₛ (ref (b , e)) = ref b , ref e
 
 {- Simple Types -}
 
@@ -132,3 +168,47 @@ L × R = Σ \(_ : L) → R
 
 _↔_ : Type i → Type j → Type (lmax i j)
 L ↔ R = (L → R) × (R → L)
+
+
+{- Equivalences -}
+
+inj : {A : Type i} {B : Type j} → (A → B) → Type (lmax i j)
+inj {_} {_} {A} {B} f = {x y : A} → f x ≡ f y → x ≡ y
+
+retr : {A : Type i} {B : Type j} → (A → B) → Type (lmax i j)
+retr {_} {_} {A} {B} f = Σ \(g : B → A) → (f ▹ g) ∼ id
+
+sect : {A : Type i} {B : Type j} → (A → B) → Type (lmax i j)
+sect {_} {_} {A} {B} f = Σ \(g : B → A) → (g ▹ f) ∼ id
+
+is-equiv : {A : Type i} {B : Type j} (f : A → B) → Type (lmax i j)
+is-equiv f = (sect f) × (retr f)
+
+_≃_ : (A : Type i) (B : Type j) → Type (lmax i j)
+A ≃ B = Σ \(f : A → B) → is-equiv f
+
+fib : {T : Type i} {B : Type j} (p : T → B) (b : B) → Type (lmax i j)
+fib p b = Σ \t → p t ≡ b
+
+isContr : Type i → Type i
+isContr A = Σ \(a : A) → (b : A) → a ≡ b
+
+-- Path Laws
+
+!-linv : {A : Type i} {x y : A} (p : x ≡ y) → ! p ∙ p ≡ ref y
+!-linv (ref a) = ref (ref a)
+
+∙-lunit : {A : Type i} {x y : A} (p : x ≡ y) → ref x ∙ p ≡ p
+∙-lunit (ref a) = ref (ref a)
+
+∙-runit : {A : Type i} {x y : A} (p : x ≡ y) → p ∙ ref y ≡ p
+∙-runit (ref a) = ref (ref a)
+
+∙-assoc : {A : Type i} {x y z w : A} (p : x ≡ y) (q : y ≡ z) (r : z ≡ w) → p ∙ (q ∙ r) ≡ (p ∙ q) ∙ r
+∙-assoc (ref a) (ref a) (ref a) = ref (ref a)
+
+∙-rcancel : {A : Type i} {x y z : A} {p q : x ≡ y} (r : y ≡ z) → p ∙ r ≡ q ∙ r → p ≡ q
+∙-rcancel {p = p} {q = q} (ref y) h = ! (∙-runit p) ∙ h ∙ (∙-runit q)
+
+ap-▹ : {A : Type i} {B : Type j} {C : Type k} (f : A → B) (g : B → C) {a a' : A} (p : a ≡ a') → ap (f ▹ g) p ≡ ap g (ap f p)
+ap-▹ f g (ref a) = ref (ref (g (f a)))
