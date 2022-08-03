@@ -37,7 +37,7 @@ data Id {B : Type i} (F : B → Type j) : {b₀ b₁ : B} (p : b₀ ≡ b₁) (e
 
 -- Identity function.
 
-id : {A : Type i} → A → A
+id : {T : Type i} → T → T
 id a = a
 
 -- Composition
@@ -132,11 +132,11 @@ infix 0 _≡ₛ_
 
 data 𝟘 : Type where
 
-𝟘-elim : {F : 𝟘 → Type i} (x : 𝟘) → F x
-𝟘-elim ()
+𝟘-elim : (F : 𝟘 → Type i) (x : 𝟘) → F x
+𝟘-elim _ ()
 
-𝟘-elim' : {B : Type i} → 𝟘 → B
-𝟘-elim' ()
+𝟘-elim' : (B : Type i) → 𝟘 → B
+𝟘-elim' _ ()
 
 data 𝟙 : Type where
   ⋆ : 𝟙
@@ -159,9 +159,9 @@ data ℕ : Type where
 
 {-# BUILTIN NATURAL ℕ #-}
 
-data _+_ (A : Type i) (B : Type j) : Type (lmax i j) where
-  il : A → (A + B)
-  ir : B → (A + B)
+data _+_ (L : Type i) (R : Type j) : Type (lmax i j) where
+  il : L → (L + R)
+  ir : R → (L + R)
 
 _×_ : Type i → Type j → Type (lmax i j)
 L × R = Σ \(_ : L) → R
@@ -169,34 +169,16 @@ L × R = Σ \(_ : L) → R
 _↔_ : Type i → Type j → Type (lmax i j)
 L ↔ R = (L → R) × (R → L)
 
-
-{- Equivalences -}
-
-inj : {A : Type i} {B : Type j} → (A → B) → Type (lmax i j)
-inj {_} {_} {A} {B} f = {x y : A} → f x ≡ f y → x ≡ y
-
-retr : {A : Type i} {B : Type j} → (A → B) → Type (lmax i j)
-retr {_} {_} {A} {B} f = Σ \(g : B → A) → (f ▹ g) ∼ id
-
-sect : {A : Type i} {B : Type j} → (A → B) → Type (lmax i j)
-sect {_} {_} {A} {B} f = Σ \(g : B → A) → (g ▹ f) ∼ id
-
-is-equiv : {A : Type i} {B : Type j} (f : A → B) → Type (lmax i j)
-is-equiv f = (sect f) × (retr f)
-
-_≃_ : (A : Type i) (B : Type j) → Type (lmax i j)
-A ≃ B = Σ \(f : A → B) → is-equiv f
-
-fib : {T : Type i} {B : Type j} (p : T → B) (b : B) → Type (lmax i j)
-fib p b = Σ \t → p t ≡ b
-
-isContr : Type i → Type i
-isContr A = Σ \(a : A) → (b : A) → a ≡ b
-
 -- Path Laws
+
+!-invo : {A : Type i} {x y : A} (p : x ≡ y) → ! (! p) ≡ p
+!-invo (ref a) = ref (ref a)
 
 !-linv : {A : Type i} {x y : A} (p : x ≡ y) → ! p ∙ p ≡ ref y
 !-linv (ref a) = ref (ref a)
+
+!-rinv : {A : Type i} {x y : A} (p : x ≡ y) → p ∙ ! p ≡ ref x
+!-rinv (ref a) = ref (ref a)
 
 ∙-lunit : {A : Type i} {x y : A} (p : x ≡ y) → ref x ∙ p ≡ p
 ∙-lunit (ref a) = ref (ref a)
@@ -210,5 +192,79 @@ isContr A = Σ \(a : A) → (b : A) → a ≡ b
 ∙-rcancel : {A : Type i} {x y z : A} {p q : x ≡ y} (r : y ≡ z) → p ∙ r ≡ q ∙ r → p ≡ q
 ∙-rcancel {p = p} {q = q} (ref y) h = ! (∙-runit p) ∙ h ∙ (∙-runit q)
 
-ap-▹ : {A : Type i} {B : Type j} {C : Type k} (f : A → B) (g : B → C) {a a' : A} (p : a ≡ a') → ap (f ▹ g) p ≡ ap g (ap f p)
+ap-▹ : {A : Type i} {B : Type j} {C : Type k} (f : A → B) (g : B → C) {x y : A} (p : x ≡ y) → ap (f ▹ g) p ≡ ap g (ap f p)
 ap-▹ f g (ref a) = ref (ref (g (f a)))
+
+ap-id : {S : Type i} {T : Type j} {x y : S} (p : x ≡ y) → ap id p ≡ p
+ap-id (ref x) = ref (ref x)
+
+{- Equivalences -}
+
+nat-htpy : {S : Type i} {T : Type j} {f g : S → T} (H : f ∼ g) {x y : S} (p : x ≡ y) → ap f p ∙ H y ≡ H x ∙ ap g p
+nat-htpy H (ref x) = ∙-lunit _ ∙ ! (∙-runit _)
+
+inj : {A : Type i} {B : Type j} → (A → B) → Type (lmax i j)
+inj {_} {_} {A} {B} f = {x y : A} → f x ≡ f y → x ≡ y
+
+retr : {A : Type i} {B : Type j} → (A → B) → Type (lmax i j)
+retr {_} {_} {A} {B} f = Σ \(g : B → A) → (f ▹ g) ∼ id
+
+sect : {A : Type i} {B : Type j} → (A → B) → Type (lmax i j)
+sect {_} {_} {A} {B} f = Σ \(g : B → A) → (g ▹ f) ∼ id
+
+is-equiv : {A : Type i} {B : Type j} → (A → B) → Type (lmax i j)
+is-equiv f = (sect f) × (retr f)
+
+_≃_ : (A : Type i) (B : Type j) → Type (lmax i j)
+A ≃ B = Σ \(f : A → B) → is-equiv f
+
+fib : {T : Type i} {B : Type j} (p : T → B) (b : B) → Type (lmax i j)
+fib p b = Σ \t → p t ≡ b
+
+is-contr : Type i → Type i
+is-contr A = Σ \(a : A) → (b : A) → a ≡ b
+
+is-hae : {S : Type i} {T : Type j} (f : S → T) → Type (lmax i j)
+is-hae f = Σ \g → Σ \((gs , gr) : ((g ▹ f ∼ id) × (f ▹ g ∼ id))) → (f ▹∼ gs) ∼ (gr ∼▹ f)
+
+is-qinv : {S : Type i} {T : Type j} (f : S → T) → Type (lmax i j)
+is-qinv f = Σ \f⁻¹ → ((f⁻¹ ▹ f ∼ id) × (f ▹ f⁻¹ ∼ id))
+
+equiv→qinv : {S : Type i} {T : Type j} {f : S → T} → is-equiv f → is-qinv f
+equiv→qinv {f = f} ((s , ps) , (r , pr)) = s , (ps , (((f ▹ s) ▹∼ !∼ pr) ∙∼ (f ▹∼ ps ∼▹ r) ∙∼ pr))
+
+qinv→equiv : {S : Type i} {T : Type j} {f : S → T} → is-qinv f → is-equiv f
+qinv→equiv {f = f} (g , ps , pr) = (g , ps) , (g , pr)
+
+qinv→hae : {S : Type i} {T : Type j} {f : S → T} → is-qinv f → is-hae f
+πb (qinv→hae (g , _)) = g
+πb (πf (qinv→hae {f = f} (g , ps , pr))) = (\x → ! (ps (f (g x))) ∙ ap f (pr (g x)) ∙ ps x) , pr
+πf (πf (qinv→hae {T = T} {f = f} (g , ps , pr))) = \x →
+  ap (\z → ! (ps (f (g (f x)))) ∙
+  ap f z ∙ ps (f x)) (! (∙-rcancel (pr x) (nat-htpy pr (pr x) ∙ ap (\y → pr (g (f x)) ∙ y) (ap-id {T = T} (pr x))))) ∙
+  ap (\z → ! (ps (f (g (f x)))) ∙ z ∙ ps (f x)) (! (ap-▹ (f ▹ g) f (pr x))) ∙
+  ap (\z → ! (ps (f (g (f x)))) ∙ z) (nat-htpy (f ▹∼ ps) (pr x)) ∙
+  ∙-assoc _ _ _ ∙
+  ap (\z → z ∙ ap f (pr x)) (!-linv _) ∙
+  ∙-lunit _
+
+hae→contr : {S : Type i} {T : Type j} {f : S → T} → is-hae f → Π ((fib f) ▹ is-contr)
+hae→contr {f = f} (g , ((gs , gr) , c)) t =
+  (g t , gs t) ,
+  \{(s , ref .(f s)) → ≡ₛ→≡ (gr s , (obs f (gr s) (gs (f s))) ∙
+                                    ap (\x → ! x ∙ gs (f s)) (! (c s)) ∙
+                                    !-linv (gs (f s)))} where
+  obs : {S : Type i} {T : Type j} (f : S → T) {x x' : S} (p : x ≡ x') {t : T} (q : f x ≡ t)
+      → tr (\s → f s ≡ t) p q ≡ ! (ap f p) ∙ q
+  obs f (ref s) q = ! (∙-lunit _)
+
+!≃ : {S : Type i} {T : Type j} → S ≃ T → T ≃ S
+!≃ (S→T , eq) with equiv→qinv eq
+... | T→S , ps , pr = T→S , qinv→equiv (S→T , pr , ps)
+
+_∙≃_ : {A : Type i} {B : Type j} {C : Type k} → A ≃ B → B ≃ C → A ≃ C
+_∙≃_ (A→B , eqAB) (B→C , eqBC) with equiv→qinv eqAB | equiv→qinv eqBC
+... | B→A , abs , abr | C→B , bcs , bcr =
+  A→B ▹ B→C ,
+  qinv→equiv (C→B ▹ B→A , (C→B ▹∼ abs ∼▹ B→C) ∙∼ bcs , (A→B ▹∼ bcr ∼▹ B→A) ∙∼ abr)
+infixr 7 _∙≃_

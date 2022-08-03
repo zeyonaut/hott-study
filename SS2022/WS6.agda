@@ -8,7 +8,7 @@ private variable i j k ℓ : Level
 
 -- Q1
 
-𝟘-isNoncontr : ¬ (isContr 𝟘)
+𝟘-isNoncontr : ¬ (is-contr 𝟘)
 𝟘-isNoncontr = πb
 
 -- Q2
@@ -48,56 +48,18 @@ lemma a b = obs-to-path-ℕ a b , (path-to-obs-ℕ a b , f a b) , (path-to-obs-�
   g nil nil ⋆ = ref ⋆
   g (suc x) (suc y) a = suc-path-to-obs x y (obs-to-path-ℕ x y a) ∙ g x y a
   
-ℕ-isNoncontr : ¬ (isContr ℕ)
+ℕ-isNoncontr : ¬ (is-contr ℕ)
 ℕ-isNoncontr (a , f) = tr id (ℕ-sr a) (πb (πb (πf (lemma a (suc a)))) (f (suc a)))
 
 -- Q3
 
-contr-types-have-contr-path-types : {A : Type i} → isContr A → (x y : A) → isContr (x ≡ y)
+contr-types-have-contr-path-types : {A : Type i} → is-contr A → (x y : A) → is-contr (x ≡ y)
 contr-types-have-contr-path-types (center , contraction) x y = (! (contraction x) ∙ contraction y) , \{(ref a) → !-linv (contraction a)}
 
 -- Q4
 
-obs : {S : Type i} {T : Type j} (f : S → T) {x x' : S} (p : x ≡ x') {t : T} (q : f x ≡ t)
-    → tr (\s → f s ≡ t) p q ≡ ! (ap f p) ∙ q
-obs f (ref s) q = ! (∙-lunit _)
-
-is-hae : {S : Type i} {T : Type j} (f : S → T) → Type (lmax i j)
-is-hae f = Σ \g → Σ \((gs , gr) : ((g ▹ f ∼ id) × (f ▹ g ∼ id))) → (f ▹∼ gs) ∼ (gr ∼▹ f)
-
-is-qinv : {S : Type i} {T : Type j} (f : S → T) → Type (lmax i j)
-is-qinv f = Σ \f⁻¹ → ((f⁻¹ ▹ f ∼ id) × (f ▹ f⁻¹ ∼ id))
-
-nat-htpy : {S : Type i} {T : Type j} {f g : S → T} (H : f ∼ g) {x y : S} (p : x ≡ y) → ap f p ∙ H y ≡ H x ∙ ap g p
-nat-htpy H (ref x) = ∙-lunit _ ∙ ! (∙-runit _)
-
-ap-id : {S : Type i} {T : Type j} {x y : S} (p : x ≡ y) → ap id p ≡ p
-ap-id (ref x) = ref (ref x)
-
-equiv→qinv : {S : Type i} {T : Type j} {f : S → T} → is-equiv f → is-qinv f
-equiv→qinv {f = f} ((s , ps) , (r , pr)) = s , (ps , (((f ▹ s) ▹∼ !∼ pr) ∙∼ (f ▹∼ ps ∼▹ r) ∙∼ pr))
-
-qinv→hae : {S : Type i} {T : Type j} {f : S → T} → is-qinv f → is-hae f
-πb (qinv→hae (g , _)) = g
-πb (πf (qinv→hae {f = f} (g , ps , pr))) = (\x → ! (ps (f (g x))) ∙ ap f (pr (g x)) ∙ ps x) , pr
-πf (πf (qinv→hae {T = T} {f = f} (g , ps , pr))) = \x →
-  ap (\z → ! (ps (f (g (f x)))) ∙
-  ap f z ∙ ps (f x)) (! (∙-rcancel (pr x) (nat-htpy pr (pr x) ∙ ap (\y → pr (g (f x)) ∙ y) (ap-id {T = T} (pr x))))) ∙
-  ap (\z → ! (ps (f (g (f x)))) ∙ z ∙ ps (f x)) (! (ap-▹ (f ▹ g) f (pr x))) ∙
-  ap (\z → ! (ps (f (g (f x)))) ∙ z) (nat-htpy (f ▹∼ ps) (pr x)) ∙
-  ∙-assoc _ _ _ ∙
-  ap (\z → z ∙ ap f (pr x)) (!-linv _) ∙
-  ∙-lunit _
-
-hae→contr : {S : Type i} {T : Type j} {f : S → T} → is-hae f → Π ((fib f) ▹ isContr)
-hae→contr {f = f} (g , ((gs , gr) , c)) t =
-  (g t , gs t) ,
-  \{(s , ref .(f s)) → ≡ₛ→≡ (gr s , (obs f (gr s) (gs (f s))) ∙
-                                    ap (\x → ! x ∙ gs (f s)) (! (c s)) ∙
-                                    !-linv (gs (f s)))}
-
 -- The base projection of a fibration is an equivalence exactly if each of its fibers is contractible.
-q4 : {B : Type i} {F : B → Type j} → is-equiv (πb {F = F}) ↔ Π (F ▹ isContr)
+q4 : {B : Type i} {F : B → Type j} → is-equiv (πb {F = F}) ↔ Π (F ▹ is-contr)
 πb (q4 {F = F}) ie b with (equiv→qinv ▹ qinv→hae ▹ hae→contr) ie b
 ... | ((b' , e') , b'≡b) , f = tr F b'≡b e' , g where
   g : (b₁ : F b) → tr F b'≡b e' ≡ b₁
